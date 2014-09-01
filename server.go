@@ -14,9 +14,10 @@ func main() {
 	m.Map(SetupDB())
 	m.Get("/posts", PostsIndex)
 	m.Get("/posts/:id", PostsShow)
+	m.Put("/posts", PostsCreate)
 	m.Use(cors.Allow(&cors.Options{
 		AllowOrigins:     []string{"http://localhost:4200"},
-		AllowMethods:     []string{"GET", "POST", "PUT"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
 		AllowHeaders:     []string{"Origin"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -34,6 +35,10 @@ func PanicIf(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func PostsCreate(r render.Render, db *sqlx.DB) {
+	r.JSON(200, "hello")
 }
 
 func PostsIndex(r render.Render, db *sqlx.DB) {
