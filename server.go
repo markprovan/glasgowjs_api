@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/codegangsta/martini-contrib/cors"
 	"github.com/go-martini/martini"
 	"github.com/jmoiron/sqlx"
@@ -14,7 +17,8 @@ func main() {
 	m.Map(SetupDB())
 	m.Get("/posts", PostsIndex)
 	m.Get("/posts/:id", PostsShow)
-	m.Put("/posts", PostsCreate)
+	m.Post("/posts", PostsCreate)
+	m.Options("/posts", PostsOptions)
 	m.Use(cors.Allow(&cors.Options{
 		AllowOrigins:     []string{"http://localhost:4200"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "OPTIONS"},
@@ -37,8 +41,24 @@ func PanicIf(err error) {
 	}
 }
 
-func PostsCreate(r render.Render, db *sqlx.DB) {
-	r.JSON(200, "hello")
+func PostsCreate(req *http.Request, r render.Render, db *sqlx.DB) {
+	var postJSON PostJSON
+	err := json.NewDecoder(req.Body).Decode(&postJSON)
+	PanicIf(err)
+
+	post := postJSON.Post
+	dbsql, err := db.Exec("insert into posts (title, body, author_id) values (?, ?, 1)", post.Title, post.Body)
+	PanicIf(err)
+	id, err := dbsql.LastInsertId()
+	PanicIf(err)
+	post.Id = id
+	r.JSON(200, map[string]interface{}{"post": post})
+}
+
+func PostsOptions(r render.Render, db *sqlx.DB, res http.ResponseWriter) {
+	res.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
+	res.Header().Set("Access-Control-Allow-Credentials", "true")
+	res.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
 }
 
 func PostsIndex(r render.Render, db *sqlx.DB) {
@@ -54,13 +74,17 @@ func PostsShow(r render.Render, db *sqlx.DB, params martini.Params) {
 	if err != nil {
 		r.JSON(404, nil)
 	} else {
-		r.JSON(200, post)
+		r.JSON(200, map[string]interface{}{"post": post})
 	}
 }
 
 type Post struct {
-	Id       int    `json:"id"`
+	Id       int64  `json:"id"`
 	Title    string `json:"title"`
 	Body     string `json:"body"`
 	AuthorId int    `json:"author_id"db:"author_id"`
+}
+
+type PostJSON struct {
+	Post Post `json:"post"`
 }
