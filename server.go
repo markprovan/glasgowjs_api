@@ -17,6 +17,8 @@ func main() {
 	m.Map(SetupDB())
 	m.Get("/posts", PostsIndex)
 	m.Get("/posts/:id", PostsShow)
+	m.Get("/authors", AuthorsIndex)
+	m.Get("/authors/:id", AuthorsShow)
 	m.Post("/posts", PostsCreate)
 	m.Options("/posts", PostsOptions)
 	m.Use(cors.Allow(&cors.Options{
@@ -78,11 +80,37 @@ func PostsShow(r render.Render, db *sqlx.DB, params martini.Params) {
 	}
 }
 
+func AuthorsIndex(r render.Render, db *sqlx.DB) {
+	authors := []Author{}
+	err := db.Select(&authors, "SELECT * FROM authors ORDER BY id DESC")
+	PanicIf(err)
+	r.JSON(200, map[string]interface{}{"authors": authors})
+}
+
+func AuthorsShow(r render.Render, db *sqlx.DB, params martini.Params) {
+	author := Author{}
+	err := db.Get(&author, "SELECT * FROM authors WHERE id = $1", params["id"])
+	if err != nil {
+		r.JSON(404, nil)
+	} else {
+		r.JSON(200, map[string]interface{}{"author": author})
+	}
+}
+
 type Post struct {
 	Id       int64  `json:"id"`
 	Title    string `json:"title"`
 	Body     string `json:"body"`
 	AuthorId int    `json:"author_id"db:"author_id"`
+}
+
+type Author struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+type AuthorJSON struct {
+	Author Author `json:"author"`
 }
 
 type PostJSON struct {
