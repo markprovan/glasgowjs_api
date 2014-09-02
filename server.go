@@ -63,7 +63,7 @@ func PostsOptions(r render.Render, db *sqlx.DB, res http.ResponseWriter) {
 
 func PostsIndex(r render.Render, db *sqlx.DB) {
 	posts := []Post{}
-	err := db.Select(&posts, "SELECT * FROM posts")
+	err := db.Select(&posts, "SELECT * FROM posts ORDER BY id DESC")
 	PanicIf(err)
 	r.JSON(200, map[string]interface{}{"posts": posts})
 }
